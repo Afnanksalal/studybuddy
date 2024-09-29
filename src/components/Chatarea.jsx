@@ -4,13 +4,17 @@ import { GoogleGenerativeAI } from "@google/generative-ai";
 import Markdown from "react-markdown";
 import { useState, useEffect, useRef } from "react";
 import { Send, Trash, Paperclip } from "lucide-react";
-import Image from "next/image";
+
 
 const ChatArea = () => {
   const messagesEndRef = useRef(null);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [history, setHistory] = useState([
+    {
+      role: "system", // This will not be displayed but is important for context
+      parts: "You are StudyBuddy, an AI study companion. Respond in a helpful, respectful, and educational manner.  Focus on study-related topics. If a query is not directly related to studying, try to gently steer the conversation back to educational topics.",
+    },
     {
       role: "model",
       parts: "Hello! I'm StudyBuddy, your AI study companion. Ask me anything, and I'll do my best to help.",
@@ -21,6 +25,7 @@ const ChatArea = () => {
   const [selectedFile, setSelectedFile] = useState(null);
   const [filePreview, setFilePreview] = useState(null);
   const [fileType, setFileType] = useState(null);
+
 
   const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 
@@ -36,12 +41,12 @@ const ChatArea = () => {
           setChat(newChat);
         } catch (error) {
           console.error("Error initializing chat:", error);
-          // Handle error, e.g., display an error message to the user
         }
       };
       initializeChat();
     }
   }, [chat, model]);
+
 
   useEffect(() => {
     if (messagesEndRef.current) {
@@ -53,9 +58,7 @@ const ChatArea = () => {
     if (selectedFile) {
       const reader = new FileReader();
       reader.onloadend = () => {
-        if (reader.result) {
-          setFilePreview(reader.result);
-        }
+        setFilePreview(reader.result);
       };
       if (selectedFile.type.startsWith("image/")) {
         reader.readAsDataURL(selectedFile);
@@ -67,7 +70,7 @@ const ChatArea = () => {
         reader.readAsText(selectedFile);
         setFileType("text");
       } else {
-        setFilePreview(null);
+        setFilePreview(null); // Or handle unsupported file types appropriately
         setFileType(null);
       }
     } else {
@@ -76,47 +79,80 @@ const ChatArea = () => {
     }
   }, [selectedFile]);
 
+
+  const discouragedKeywords = ["cheat", "hack", "illegal", "plagiarize"];
+
   async function chatting() {
-    if (!input.trim() && !selectedFile) {
+    const trimmedInput = input.trim();
+
+    if (!trimmedInput && !selectedFile) {
+      // Handle empty input
+      return;
+    }
+
+    const containsDiscouraged = discouragedKeywords.some((word) =>
+    trimmedInput.toLowerCase().includes(word)
+    );
+
+    if (containsDiscouraged) {
       setHistory((oldHistory) => [
         ...oldHistory,
         {
+          role: "user",
+          parts: trimmedInput,
+          file: filePreview,
+          fileName: selectedFile?.name,
+          fileType,
+        },
+        {
           role: "model",
-          parts: "Please enter a message or upload a file to continue.",
+          parts: "I'm here to help you study.  Let's keep our conversation focused on educational topics.",
         },
       ]);
+      setInput("");
+      setSelectedFile(null);
+      setFilePreview(null);
+      setFileType(null);
+
       return;
     }
+
 
     setLoading(true);
     setHistory((oldHistory) => [
       ...oldHistory,
       {
         role: "user",
-        parts: input,
+        parts: trimmedInput,
         file: filePreview,
-        fileName: selectedFile ? selectedFile.name : undefined,
-        fileType: fileType,
+        fileName: selectedFile?.name,
+        fileType,
       },
-      {
-        role: "model",
-        parts: "Thinking...",
-      },
+      { role: "model", parts: "Thinking..." },
     ]);
     setInput("");
     setSelectedFile(null);
+    setFilePreview(null);
+    setFileType(null);
+
 
     try {
-      let prompt = input;
+      let prompt = trimmedInput;
       let file = null;
+
       if (selectedFile) {
         const base64EncodedDataPromise = new Promise((resolve) => {
           const reader = new FileReader();
           reader.onloadend = () => {
             if (reader.result) {
-              resolve(reader.result.split(",")[1]);
+              if (selectedFile.type.startsWith("image/") || selectedFile.type === "application/pdf") {
+                resolve(reader.result.split(",")[1]);
+              } else if (selectedFile.type === "text/plain") {
+                resolve(reader.result);
+              }
             } else {
               console.error("FileReader result is null");
+              resolve(null);
             }
           };
           if (selectedFile.type.startsWith("image/")) {
@@ -128,31 +164,40 @@ const ChatArea = () => {
           }
         });
         const base64Data = await base64EncodedDataPromise;
-        file = {
-          inlineData: {
-            data: base64Data,
-            mimeType: selectedFile.type,
-          },
-        };
+        if (base64Data) {
+          file = {
+            inlineData: {
+              data: base64Data,
+              mimeType: selectedFile.type,
+            },
+          };
+        }
       }
 
-      console.log("Prompt:", prompt);
-      console.log("File:", file);
 
-      const result = await model.generateContent([prompt, file]);
-      if (result) {
-        const response = await result.response;
-        const text = response.text();
-        setLoading(false);
-        setHistory((oldHistory) => {
-          const newHistory = oldHistory.slice(0, oldHistory.length - 1);
-          newHistory.push({
-            role: "model",
-            parts: text,
-          });
-          return newHistory;
-        });
-      }
+      const systemPrompt =
+      "Please answer this in a helpful, respectful, and educational manner, focusing only on study-related content.";
+
+          const combinedPrompt = `${systemPrompt}\n\n${prompt}`;
+
+          const result = await model.generateContent([combinedPrompt, file].filter(Boolean));
+
+
+          if (result) {
+            const response = await result.response;
+            const text = await response.text();
+
+            setLoading(false);
+            setHistory((oldHistory) => {
+              const newHistory = oldHistory.slice(0, oldHistory.length - 1);
+              newHistory.push({ role: "model", parts: text });
+              return newHistory;
+            });
+          }
+          else {
+            throw new Error("No response from AI model.");
+          }
+
     } catch (error) {
       setLoading(false);
       console.error("Error sending message:", error);
@@ -167,15 +212,20 @@ const ChatArea = () => {
     }
   }
 
+
   function handleKeyDown(e) {
     if (e.key === "Enter" && !e.shiftKey) {
-      e.preventDefault(); // Prevent the default behavior of inserting a new line
+      e.preventDefault();
       chatting();
     }
   }
 
   function reset() {
     setHistory([
+      {
+        role: "system",
+        parts: "You are StudyBuddy, an AI study companion. Respond in a helpful, respectful, and educational manner. Focus solely on study-related topics and avoid inappropriate or non-educational content.",
+      },
       {
         role: "model",
         parts: "Hello! I'm StudyBuddy, your AI study companion. Ask me anything, and I'll do my best to help.",
@@ -195,10 +245,11 @@ const ChatArea = () => {
   }
 
   return (
-    <div className="relative flex px-2 justify-center max-w-3xl min-h-dvh w-full pt-6 max-h-screen ">
+    <div className="relative flex px-2 justify-center max-w-3xl min-h-dvh w-full pt-6 max-h-screen">
     <div className="flex text-sm md:text-base flex-col pt-10 pb-16 w-full flex-grow flex-1 overflow-y-auto">
-    {Array.isArray(history) && history.length > 0 && (
-      history.map((item, index) => (
+    {history
+      .filter((item) => item.role !== "system") // Filter out system messages
+      .map((item, index) => (
         <div
         key={index}
         className={`chat ${
@@ -235,29 +286,45 @@ const ChatArea = () => {
           )}
           </div>
         )}
-        <div className="chat-bubble font-medium p-3 bg-gray-700 rounded-lg shadow-md overflow-x-auto">
-        <Markdown components={{
+        <div
+        className={`chat-bubble font-medium p-3 rounded-lg shadow-md overflow-x-auto ${
+          item.role === "model"
+          ? "bg-blue-100 text-gray-800"
+          : "bg-green-100 text-gray-800"
+        }`}
+        >
+        <Markdown
+        components={{
           p: ({ node, ...props }) => (
-            <p {...props} style={{ whiteSpace: 'pre-wrap' }}>
+            <p {...props} style={{ whiteSpace: "pre-wrap" }}>
             {props.children}
             </p>
           ),
           pre: ({ node, ...props }) => (
-            <pre {...props} style={{ whiteSpace: 'pre-wrap', overflowX: 'auto' }}>
+            <pre
+            {...props}
+            style={{ whiteSpace: "pre-wrap", overflowX: "auto" }}
+            >
             {props.children}
             </pre>
           ),
           code: ({ node, ...props }) => (
-            <code {...props} style={{ whiteSpace: 'pre-wrap', overflowX: 'auto' }}>
+            <code
+            {...props}
+            style={{ whiteSpace: "pre-wrap", overflowX: "auto" }}
+            >
             {props.children}
             </code>
           ),
-        }}>{item.parts}</Markdown>
+        }}
+        >
+        {item.parts}
+        </Markdown>
         </div>
         </div>
       ))
-    )}
-    <div ref={messagesEndRef} />
+    }
+    <div ref={messagesEndRef} /> {/* Keep this outside the map */}
     </div>
     <div className="absolute px-2 bottom-2 w-full flex flex-col gap-1">
     {filePreview && (
@@ -309,13 +376,12 @@ const ChatArea = () => {
     onKeyDown={handleKeyDown}
     onChange={(e) => setInput(e.target.value)}
     placeholder="Chat"
-    className="textarea backdrop-blur textarea-primary w-full mx-auto bg-opacity-60 font-medium shadow rounded-2xl no-resize"
+    className="textarea backdrop-blur textarea-primary w-full mx-auto bg-opacity-60 font-medium shadow rounded-2xl no-resize border-2"
+    style={{ outline: "none" }}
     />
     <button
     className={`btn rounded-2xl shadow-md ${
-      loading
-      ? "btn-accent cursor-wait pointer-events-none"
-      : "btn-primary"
+      loading ? "btn-accent cursor-wait pointer-events-none" : "btn-primary"
     }`}
     title="send"
     onClick={chatting}
@@ -323,12 +389,14 @@ const ChatArea = () => {
     {loading ? (
       <span className="loading loading-spinner loading-sm"></span>
     ) : (
-      <span className="inline-block"><Send /></span>
+      <span className="inline-block">
+      <Send />
+      </span>
     )}
     </button>
     <button
     className="btn shadow-md btn-error rounded-2xl backdrop-blur"
-    title="send"
+    title="reset"
     onClick={reset}
     >
     <Trash />
