@@ -246,7 +246,7 @@ const ChatArea = () => {
 
   return (
     <div className="relative flex px-2 justify-center max-w-3xl min-h-dvh w-full pt-6 max-h-screen">
-    <div className="flex text-sm md:text-base flex-col pt-10 pb-16 w-full flex-grow flex-1 overflow-y-auto">
+    <div className="flex text-sm md:text-base flex-col pt-1 pb-16 w-full flex-grow flex-1 overflow-y-auto mt-9">
     {history
       .filter((item) => item.role !== "system") // Filter out system messages
       .map((item, index) => (
