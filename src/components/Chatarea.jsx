@@ -168,7 +168,8 @@ const ChatArea = () => {
   }
 
   function handleKeyDown(e) {
-    if (e.key === "Enter") {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault(); // Prevent the default behavior of inserting a new line
       chatting();
     }
   }
@@ -194,8 +195,8 @@ const ChatArea = () => {
   }
 
   return (
-    <div className="relative flex px-2 justify-center max-w-3xl min-h-dvh w-full pt-6 bg-gray-900 rounded-t-3xl max-h-screen shadow shadow-slate-900">
-    <div className="flex text-sm md:text-base flex-col pt-10 pb-16 w-full flex-grow flex-1 rounded-3xl shadow-md overflow-y-auto">
+    <div className="relative flex px-2 justify-center max-w-3xl min-h-dvh w-full pt-6 max-h-screen ">
+    <div className="flex text-sm md:text-base flex-col pt-10 pb-16 w-full flex-grow flex-1 overflow-y-auto">
     {Array.isArray(history) && history.length > 0 && (
       history.map((item, index) => (
         <div
