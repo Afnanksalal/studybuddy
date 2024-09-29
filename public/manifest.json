@@ -1,7 +1,7 @@
 {
-  "id": "Gemini Pro",
-  "name": "Gemini Pro",
-  "short_name": "Gemini Pro",
+  "id": "StudyBuddy",
+  "name": "StudyBuddy",
+  "short_name": "StudyBuddy",
   "scope": "/",
   "start_url": "/",
   "icons": [
