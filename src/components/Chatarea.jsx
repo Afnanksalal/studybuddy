@@ -235,7 +235,7 @@ const ChatArea = () => {
           )}
           </div>
         )}
-        <div className="chat-bubble font-medium p-3 bg-gray-800 rounded-lg shadow-md overflow-x-auto">
+        <div className="chat-bubble font-medium p-3 bg-gray-700 rounded-lg shadow-md overflow-x-auto">
         <Markdown components={{
           p: ({ node, ...props }) => (
             <p {...props} style={{ whiteSpace: 'pre-wrap' }}>
@@ -297,7 +297,7 @@ const ChatArea = () => {
     />
     <label
     htmlFor="file-input"
-    className="btn btn-accent rounded-3xl shadow-md btn-outline backdrop-blur"
+    className="btn btn-accent rounded-2xl shadow-md backdrop-blur"
     >
     <Paperclip />
     </label>
@@ -308,11 +308,11 @@ const ChatArea = () => {
     rows={1}
     onKeyDown={handleKeyDown}
     onChange={(e) => setInput(e.target.value)}
-    placeholder="Ask a Question..."
-    className="textarea backdrop-blur textarea-primary w-full mx-auto bg-opacity-60 font-medium shadow rounded-3xl"
+    placeholder="Chat"
+    className="textarea backdrop-blur textarea-primary w-full mx-auto bg-opacity-60 font-medium shadow rounded-2xl no-resize"
     />
     <button
-    className={`btn rounded-3xl shadow-md ${
+    className={`btn rounded-2xl shadow-md ${
       loading
       ? "btn-accent cursor-wait pointer-events-none"
       : "btn-primary"
@@ -327,7 +327,7 @@ const ChatArea = () => {
     )}
     </button>
     <button
-    className="btn btn-outline shadow-md btn-error rounded-3xl backdrop-blur"
+    className="btn shadow-md btn-error rounded-2xl backdrop-blur"
     title="send"
     onClick={reset}
     >
