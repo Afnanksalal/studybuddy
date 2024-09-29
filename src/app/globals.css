@@ -11,3 +11,7 @@ body {
 .no-resize {
   resize: none;
 }
+
+textarea:focus {
+  outline: none;
+}
