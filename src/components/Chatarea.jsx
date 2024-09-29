@@ -234,8 +234,24 @@ const ChatArea = () => {
           )}
           </div>
         )}
-        <div className="chat-bubble font-medium p-3 bg-gray-800 rounded-lg shadow-md">
-        <Markdown>{item.parts}</Markdown>
+        <div className="chat-bubble font-medium p-3 bg-gray-800 rounded-lg shadow-md overflow-x-auto">
+        <Markdown components={{
+          p: ({ node, ...props }) => (
+            <p {...props} style={{ whiteSpace: 'pre-wrap' }}>
+            {props.children}
+            </p>
+          ),
+          pre: ({ node, ...props }) => (
+            <pre {...props} style={{ whiteSpace: 'pre-wrap', overflowX: 'auto' }}>
+            {props.children}
+            </pre>
+          ),
+          code: ({ node, ...props }) => (
+            <code {...props} style={{ whiteSpace: 'pre-wrap', overflowX: 'auto' }}>
+            {props.children}
+            </code>
+          ),
+        }}>{item.parts}</Markdown>
         </div>
         </div>
       ))
