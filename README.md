@@ -15,7 +15,7 @@ StudyBuddy is an AI-powered study companion designed to help you learn and under
 ### Clone the Repository
 
 ```bash
-git clone https://github.com/Afnanksalal/studdybuddy.git
+git clone https://github.com/Afnanksalal/studybuddy.git
 cd studybuddy
 ```
 
